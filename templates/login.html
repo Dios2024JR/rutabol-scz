@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Login - RUTABOL-SCZ</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="{{ tema }}">
+  <div class="auth-box">
+    <h2>RUTABOL-SCZ — Acceso</h2>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}
+        <div class="flash {{ cat }}"><strong>{{ cat|upper }}:</strong> {{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <form method="post">
+      <label>Correo electronico</label>
+      <input type="email" name="email" value="{{ ultimo_usuario }}" required>
+      <label>Contrasena</label>
+      <input type="password" name="password" required>
+      <button type="submit">Ingresar</button>
+    </form>
+
+    <p>¿No tienes cuenta? <a href="{{ url_for('registro') }}">Registrate aqui</a></p>
+    <hr>
+    <small>
+      <strong>Cuentas demo:</strong><br>
+      Pasajero UPDS: <code>jhon@upds.edu.bo</code> / <code>Upds123*</code><br>
+      Chofer: <code>chofer18@rutabol.bo</code> / <code>Chofer123*</code><br>
+      Admin: <code>admin@rutabol.bo</code> / <code>Admin123*</code>
+    </small>
+  </div>
+</body>
+</html>

@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Panel Principal - RUTABOL-SCZ</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="{{ tema }}">
+  <div class="container">
+    <div class="topbar">
+      <div class="user-info">
+        {% if session.foto_ref and session.foto_ref != 'default.png' %}
+          <img class="avatar" src="{{ url_for('static', filename='uploads/' + session.foto_ref) }}" alt="Foto perfil">
+        {% endif %}
+        <div>
+          <strong>{{ session.nombre }}</strong> <span class="badge">{{ session.rol|upper }}</span><br>
+          <small>Perfil: {{ session.categoria|capitalize }} | Tarifa: <strong>Bs {{ "%.2f"|format(tarifa_usuario) }}</strong></small>
+        </div>
+      </div>
+      <div>
+        <a href="{{ url_for('cambiar_tema', nuevo_tema='claro') }}">Tema Claro</a> |
+        <a href="{{ url_for('cambiar_tema', nuevo_tema='oscuro') }}">Tema Oscuro</a> |
+        <a href="{{ url_for('logout') }}">Cerrar sesion</a>
+      </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}
+        <div class="flash {{ cat }}"><strong>{{ cat|upper }}:</strong> {{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <div class="grid">
+      <div class="card">
+        <h3>1. Mi Ubicacion (Radio 5 km — RF-07)</h3>
+        <form id="form-ubicacion" method="post" action="{{ url_for('actualizar_ubicacion') }}">
+          <label>Latitud</label>
+          <input type="text" id="lat" name="lat" value="{{ user_lat }}" required>
+          <label>Longitud</label>
+          <input type="text" id="lon" name="lon" value="{{ user_lon }}" required>
+          <button type="button" class="btn-secondary" onclick="obtenerGPS()">Detectar mi GPS automaticamente</button>
+          <button type="submit">Guardar ubicacion en Cookie</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <h3>2. Comprar Boleto Digital (RF-08)</h3>
+        <form method="post" action="{{ url_for('comprar_boleto') }}">
+          <label>Seleccionar Micro / Linea</label>
+          <select name="unidad_id" required>
+            {% for u in unidades if u.estado == 'operativa' %}
+              <option value="{{ u.id }}">
+                {{ u.linea }} | Int: {{ u.numero_interno }} ({{ u.placa }}) — {{ u.ocupados }}/{{ u.capacidad_max }} asientos [{{ u.distancia_km }} km]
+              </option>
+            {% endfor %}
+          </select>
+          <label>Numero de Tarjeta (16 digitos)</label>
+          <input type="text" name="tarjeta" maxlength="16" placeholder="4532123456789012" required>
+          <button type="submit">Pagar Bs {{ "%.2f"|format(tarifa_usuario) }}</button>
+        </form>
+      </div>
+
+      {% if session.rol in ['admin', 'chofer'] %}
+      <div class="card">
+        <h3>3. Alta de Unidad (Solo Admin/Chofer — RF-05)</h3>
+        <form method="post" action="{{ url_for('nueva_unidad') }}">
+          <label>Linea</label>
+          <input type="text" name="linea" placeholder="Ej. Linea 44" required>
+          <label>Numero Interno</label>
+          <input type="text" name="numero_interno" placeholder="Ej. INT-310" required>
+          <label>Placa</label>
+          <input type="text" name="placa" placeholder="Ej. 6120-SCZ" required>
+          <label>Nombre del Chofer</label>
+          <input type="text" name="chofer_nombre" required>
+          <label>Capacidad Maxima (18 a 25)</label>
+          <input type="number" name="capacidad_max" min="18" max="25" value="22" required>
+          <button type="submit">Registrar Unidad</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <h3>4. Trasbordo Relevo / Emergencia (RF-09 / RF-10)</h3>
+        <form method="post" action="{{ url_for('ejecutar_trasbordo') }}">
+          <label>Unidad Saliente (Origen)</label>
+          <select name="origen_id" required>
+            {% for u in unidades %}
+              <option value="{{ u.id }}">{{ u.linea }} ({{ u.numero_interno }}) — {{ u.ocupados }} pasajeros</option>
+            {% endfor %}
+          </select>
+          <label>Unidad Entrante (Destino)</label>
+          <select name="destino_id" required>
+            {% for u in unidades if u.estado == 'operativa' %}
+              <option value="{{ u.id }}">{{ u.linea }} ({{ u.numero_interno }}) — {{ u.ocupados }}/{{ u.capacidad_max }}</option>
+            {% endfor %}
+          </select>
+          <label>Motivo de Trasbordo</label>
+          <select name="tipo">
+            <option value="relevo">Relevo de turno (conserva recaudacion)</option>
+            <option value="emergencia">Emergencia / Falla mecanica (pase gratuito)</option>
+          </select>
+          <button type="submit" class="btn-warn">Ejecutar Trasbordo</button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="card" style="margin-bottom: 18px;">
+      <h3>Flota de Transporte en Santa Cruz de la Sierra</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Linea</th>
+            <th>Interno</th>
+            <th>Placa</th>
+            <th>Chofer</th>
+            <th>Aforo</th>
+            <th>Recaudacion</th>
+            <th>Distancia</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in unidades %}
+          <tr>
+            <td><strong>{{ u.linea }}</strong></td>
+            <td>{{ u.numero_interno }}</td>
+            <td>{{ u.placa }}</td>
+            <td>{{ u.chofer_nombre }}</td>
+            <td>{{ u.ocupados }} / {{ u.capacidad_max }}</td>
+            <td>Bs {{ "%.2f"|format(u.recaudacion) }}</td>
+            <td>{{ u.distancia_km }} km {% if u.en_radio %}<strong>(En radio 5km)</strong>{% endif %}</td>
+            <td>{{ u.estado }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>Ultimos Boletos y Trasbordos Emitidos</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Pasajero / Operador</th>
+            <th>Unidad</th>
+            <th>Tipo</th>
+            <th>Monto</th>
+            <th>Tarjeta</th>
+            <th>Fecha</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for b in boletos %}
+          <tr>
+            <td>#{{ b.id }}</td>
+            <td>{{ b.pasajero }}</td>
+            <td>{{ b.linea }} ({{ b.numero_interno }})</td>
+            <td>{{ b.tipo_emision }} ({{ b.categoria }})</td>
+            <td>Bs {{ "%.2f"|format(b.monto) }}</td>
+            <td>**** {{ b.tarjeta_ult4 }}</td>
+            <td>{{ b.fecha }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    function obtenerGPS() {
+      if (!navigator.geolocation) {
+        alert("Tu navegador no soporta geolocalizacion.");
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        function(pos) {
+          document.getElementById("lat").value = pos.coords.latitude.toFixed(6);
+          document.getElementById("lon").value = pos.coords.longitude.toFixed(6);
+          document.getElementById("form-ubicacion").submit();
+        },
+        function() {
+          alert("No se pudo obtener el GPS. Verifica permisos o ingresa coordenadas manualmente.");
+        }
+      );
+    }
+  </script>
+</body>
+</html>

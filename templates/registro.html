@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Registro - RUTABOL-SCZ</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="{{ tema }}">
+  <div class="auth-box">
+    <h2>Registro de Pasajero — RUTABOL-SCZ</h2>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}
+        <div class="flash {{ cat }}"><strong>{{ cat|upper }}:</strong> {{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    <form method="post" enctype="multipart/form-data">
+      <label>Nombre completo</label>
+      <input type="text" name="nombre" required>
+
+      <label>Correo electronico (Universitarios: debe terminar en @upds.edu.bo)</label>
+      <input type="email" name="email" required>
+
+      <label>Contrasena (minimo 6 caracteres, se guarda con hash)</label>
+      <input type="password" name="password" required>
+
+      <label>Categoria tarifaria</label>
+      <select name="categoria">
+        <option value="general">General (Bs 2.50)</option>
+        <option value="escolar">Escolar — requiere RUDE y foto (Bs 1.00)</option>
+        <option value="universitario">Universitario — requiere codEst, @upds.edu.bo y foto (Bs 1.50)</option>
+      </select>
+
+      <label>Codigo RUDE (si es Escolar)</label>
+      <input type="text" name="rude" placeholder="Ej. 71230456001">
+
+      <label>Codigo de Estudiante codEst (si es Universitario)</label>
+      <input type="text" name="cod_est" placeholder="Ej. 20241001">
+
+      <label>Fotografia de perfil / estudiante (JPG, PNG, WEBP)</label>
+      <input type="file" name="foto" accept=".png,.jpg,.jpeg,.webp">
+
+      <button type="submit">Registrar</button>
+    </form>
+    <p><a href="{{ url_for('login') }}">Volver al Login</a></p>
+  </div>
+</body>
+</html>
